@@ -9,102 +9,141 @@ struct User {
 };
 
 int main() {
+    FILE *filePtr, *tempPtr;
+    struct User currentUser;
     int choice;
-    FILE *fp, *temp;
-    struct User u;
-    int id, found;
+    int searchId;
+    int recordFound;
 
-    do {
-        printf("\n1. Create User\n");
-        printf("2. Read Users\n");
+    while (1) {
+        printf("\n=== USER MANAGEMENT SYSTEM ===\n");
+        printf("1. Create User\n");
+        printf("2. Display All Users\n");
         printf("3. Update User\n");
         printf("4. Delete User\n");
         printf("5. Exit\n");
-        printf("Enter choice: ");
+        printf("Enter your choice: ");
         scanf("%d", &choice);
 
-        if (choice == 1) {
-            fp = fopen("users.txt", "r");
-            int newId;
-            printf("Enter ID: "); 
-            scanf("%d", &newId);
-            found = 0;
+        switch (choice) {
+            case 1: {
+                filePtr = fopen("users.txt", "r");
+                int newUserId;
+                printf("Enter ID: ");
+                scanf("%d", &newUserId);
+                recordFound = 0;
 
-            if (fp) {
-                while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) == 3) {
-                    if (u.id == newId) {
-                        printf("Error: User ID already exists.\n");
-                        found = 1;
-                        break;
+                if (filePtr) {
+                    while (fscanf(filePtr, "%d %s %d", &currentUser.id, currentUser.name, &currentUser.age) == 3) {
+                        if (currentUser.id == newUserId) {
+                            printf("Error: User ID already exists.\n");
+                            recordFound = 1;
+                            break;
+                        }
                     }
+                    fclose(filePtr);
                 }
-                fclose(fp);
+
+                if (!recordFound) {
+                    filePtr = fopen("users.txt", "a");
+                    currentUser.id = newUserId;
+                    printf("Enter Name: ");
+                    scanf("%s", currentUser.name);
+                    printf("Enter Age: ");
+                    scanf("%d", &currentUser.age);
+                    fprintf(filePtr, "%d %s %d\n", currentUser.id, currentUser.name, currentUser.age);
+                    fclose(filePtr);
+                    printf("User added successfully!\n");
+                }
+                break;
             }
 
-            if (!found) {
-                fp = fopen("users.txt", "a");
-                u.id = newId;
-                printf("Enter Name: "); 
-                scanf("%s", u.name);
-                printf("Enter Age: "); 
-                scanf("%d", &u.age);
-                fprintf(fp, "%d %s %d\n", u.id, u.name, u.age);
-                fclose(fp);
-                printf("User added successfully!\n");
-            }
-        }
-        else if (choice == 2) {
-            fp = fopen("users.txt", "r");
-            if (!fp) { 
-            printf("No records found.\n"); 
-            continue; 
-            }
-            printf("\n--- Users ---\n");
-            while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) == 3) {
-                printf("%d %s %d\n", u.id, u.name, u.age);
-            }
-            fclose(fp);
-        }
-        else if (choice == 3) {
-            fp = fopen("users.txt", "r");
-            temp = fopen("temp.txt", "w");
-            printf("Enter ID to update: ");
-            scanf("%d", &id);
-            found = 0;
-            while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) == 3) {
-                if (u.id == id) {
-                    printf("Enter new Name: "); scanf("%s", u.name);
-                    printf("Enter new Age: "); scanf("%d", &u.age);
-                    found = 1;
+            case 2: {
+                filePtr = fopen("users.txt", "r");
+                if (!filePtr) {
+                    printf("No records found.\n");
+                    break;
                 }
-                fprintf(temp, "%d %s %d\n", u.id, u.name, u.age);
-            }
-            fclose(fp); fclose(temp);
-            remove("users.txt");
-            rename("temp.txt", "users.txt");
-            if (!found) printf("ID not found.\n");
-        }
-        else if (choice == 4) {
-            fp = fopen("users.txt", "r");
-            temp = fopen("temp.txt", "w");
-            printf("Enter ID to delete: ");
-            scanf("%d", &id);
-            found = 0;
-            while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) == 3) {
-                if (u.id == id) {
-                    found = 1; continue;
+                printf("\n--- List of Users ---\n");
+                while (fscanf(filePtr, "%d %s %d", &currentUser.id, currentUser.name, &currentUser.age) == 3) {
+                    printf("ID: %d | Name: %s | Age: %d\n", currentUser.id, currentUser.name, currentUser.age);
                 }
-                fprintf(temp, "%d %s %d\n", u.id, u.name, u.age);
+                fclose(filePtr);
+                break;
             }
-            fclose(fp); fclose(temp);
-            remove("users.txt");
-            rename("temp.txt", "users.txt");
-            if (!found){ 
-                printf("ID not found.\n");
+
+            case 3: {
+                filePtr = fopen("users.txt", "r");
+                if (!filePtr) {
+                    printf("No records found to update.\n");
+                    break;
+                }
+                tempPtr = fopen("temp.txt", "w");
+                printf("Enter ID to update: ");
+                scanf("%d", &searchId);
+                recordFound = 0;
+
+                while (fscanf(filePtr, "%d %s %d", &currentUser.id, currentUser.name, &currentUser.age) == 3) {
+                    if (currentUser.id == searchId) {
+                        printf("Enter new Name: ");
+                        scanf("%s", currentUser.name);
+                        printf("Enter new Age: ");
+                        scanf("%d", &currentUser.age);
+                        recordFound = 1;
+                    }
+                    fprintf(tempPtr, "%d %s %d\n", currentUser.id, currentUser.name, currentUser.age);
+                }
+
+                fclose(filePtr);
+                fclose(tempPtr);
+                remove("users.txt");
+                rename("temp.txt", "users.txt");
+
+                if (recordFound)
+                    printf("User updated successfully!\n");
+                else
+                    printf("ID not found.\n");
+                break;
             }
+
+            case 4: {
+                filePtr = fopen("users.txt", "r");
+                if (!filePtr) {
+                    printf("No records found to delete.\n");
+                    break;
+                }
+                tempPtr = fopen("temp.txt", "w");
+                printf("Enter ID to delete: ");
+                scanf("%d", &searchId);
+                recordFound = 0;
+
+                while (fscanf(filePtr, "%d %s %d", &currentUser.id, currentUser.name, &currentUser.age) == 3) {
+                    if (currentUser.id == searchId) {
+                        recordFound = 1;
+                        continue;
+                    }
+                    fprintf(tempPtr, "%d %s %d\n", currentUser.id, currentUser.name, currentUser.age);
+                }
+
+                fclose(filePtr);
+                fclose(tempPtr);
+                remove("users.txt");
+                rename("temp.txt", "users.txt");
+
+                if (recordFound)
+                    printf("User deleted successfully!\n");
+                else
+                    printf("ID not found.\n");
+                break;
+            }
+
+            case 5:
+                printf("Exiting program.\n");
+                return 0;
+
+            default:
+                printf("Invalid choice. Try again.\n");
         }
-
-    } while (choice != 5);
-
+    }
     return 0;
 }
