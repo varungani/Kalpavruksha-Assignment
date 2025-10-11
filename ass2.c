@@ -2,6 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+enum MenuChoice {
+    CREATE_USER = 1,
+    DISPLAY_USERS,
+    UPDATE_USER,
+    DELETE_USER,
+    EXIT
+};
+
 struct User {
     int id;
     char name[50];
@@ -28,6 +36,10 @@ void addUser() {
 
     if (!found) {
         filePtr = fopen("users.txt", "a");
+        if (!filePtr) {
+            printf("Error opening file for writing.\n");
+            return;
+        }
         user.id = newId;
         printf("Enter Name: ");
         scanf("%s", user.name);
@@ -43,13 +55,14 @@ void displayUsers() {
     FILE *filePtr = fopen("users.txt", "r");
     struct User user;
     if (!filePtr) {
-        printf("No records found.\n");
+        printf("No records found. File may not exist yet.\n");
         return;
     }
-    printf("\n List of Users \n");
+    printf("\nList of Users\n");
     while (fscanf(filePtr, "%d %s %d", &user.id, user.name, &user.age) == 3) {
         printf("ID: %d | Name: %s | Age: %d\n", user.id, user.name, user.age);
     }
+    printf("--- End of List ---\n");
     fclose(filePtr);
 }
 
@@ -60,6 +73,12 @@ void updateUser() {
         return;
     }
     FILE *tempPtr = fopen("temp.txt", "w");
+    if (!tempPtr) {
+        printf("Error creating temporary file.\n");
+        fclose(filePtr);
+        return;
+    }
+
     struct User user;
     int id, found = 0;
     printf("Enter ID to update: ");
@@ -94,6 +113,12 @@ void deleteUser() {
         return;
     }
     FILE *tempPtr = fopen("temp.txt", "w");
+    if (!tempPtr) {
+        printf("Error creating temporary file.\n");
+        fclose(filePtr);
+        return;
+    }
+
     struct User user;
     int id, found = 0;
     printf("Enter ID to delete: ");
@@ -131,12 +156,23 @@ int main() {
         scanf("%d", &choice);
 
         switch (choice) {
-            case 1: addUser(); break;
-            case 2: displayUsers(); break;
-            case 3: updateUser(); break;
-            case 4: deleteUser(); break;
-            case 5: printf("Exiting program.\n"); return 0;
-            default: printf("Invalid choice. Try again.\n");
+            case CREATE_USER:
+                addUser();
+                break;
+            case DISPLAY_USERS:
+                displayUsers();
+                break;
+            case UPDATE_USER:
+                updateUser();
+                break;
+            case DELETE_USER:
+                deleteUser();
+                break;
+            case EXIT:
+                printf("Exiting program.\n");
+                return 0;
+            default:
+                printf("Invalid choice. Please try again.\n");
         }
     }
 }
