@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 enum MenuChoice {
     CREATE_USER = 1,
@@ -145,7 +146,9 @@ void deleteUser() {
 
 int main() {
     int choice;
-    while (1) {
+    bool start = true;
+
+    while (start) {
         printf("\n USER MANAGEMENT SYSTEM \n");
         printf("1. Create User\n");
         printf("2. Display All Users\n");
@@ -170,9 +173,12 @@ int main() {
                 break;
             case EXIT:
                 printf("Exiting program.\n");
-                return 0;
+                start = false;
+                break;
             default:
                 printf("Invalid choice. Please try again.\n");
         }
     }
+
+    return 0;
 }
