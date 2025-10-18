@@ -61,7 +61,7 @@ void printPerformance(char grade)
         return;
     }
 
-    for (int i = 0; i < stars; i++)
+    for (int index = 0; index < stars; index++)
     {
         printf("*");
     }
@@ -80,48 +80,48 @@ void printRollNumbers(Student students[], int n, int index)
 
 int main()
 {
-    int n;
+    int totalStudents;
     printf("Enter number of students: ");
-    scanf("%d", &n);
+    scanf("%d", &totalStudents);
 
-    Student students[n];
+    Student students[totalStudents];
 
-    for (int i = 0; i < n; i++)
+    for (int index = 0; index < totalStudents; index++)
     {
-        printf("\nEnter details for student %d:\n", i + 1);
+        printf("\nEnter details for student %d:\n", index + 1);
         scanf("%d %s %d %d %d",
-              &students[i].rollNumber,
-              students[i].name,
-              &students[i].marks[0],
-              &students[i].marks[1],
-              &students[i].marks[2]);
+              &students[index].rollNumber,
+              students[index].name,
+              &students[index].marks[0],
+              &students[index].marks[1],
+              &students[index].marks[2]);
 
-        students[i].total = calculateTotal(students[i].marks);
-        students[i].average = calculateAverage(students[i].total);
-        students[i].grade = assignGrade(students[i].average);
+        students[index].total = calculateTotal(students[index].marks);
+        students[index].average = calculateAverage(students[index].total);
+        students[index].grade = assignGrade(students[index].average);
     }
 
     printf("\n");
-    for (int i = 0; i < n; i++)
+    for (int index = 0; index < totalStudents; index++)
     {
-        printf("Roll: %d\n", students[i].rollNumber);
-        printf("Name: %s\n", students[i].name);
-        printf("Total: %d\n", students[i].total);
-        printf("Average: %.2f\n", students[i].average);
-        printf("Grade: %c\n", students[i].grade);
+        printf("Roll: %d\n", students[index].rollNumber);
+        printf("Name: %s\n", students[index].name);
+        printf("Total: %d\n", students[index].total);
+        printf("Average: %.2f\n", students[index].average);
+        printf("Grade: %c\n", students[index].grade);
 
-        if (students[i].average < 35)
+        if (students[index].average < 35)
         {
             continue;
         }
 
         printf("Performance: ");
-        printPerformance(students[i].grade);
+        printPerformance(students[index].grade);
         printf("\n\n");
     }
 
     printf("List of Roll Numbers (via recursion): ");
-    printRollNumbers(students, n, 0);
+    printRollNumbers(students, totalStudents, 0);
     printf("\n");
 
     return 0;
