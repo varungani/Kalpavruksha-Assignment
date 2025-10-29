@@ -1,40 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
-int isValidValue(int value) {
-    if (value < 0 || value > 255) {
-        printf("\nEnter value between 0 and 255: ");
-        return 0;
-    }
-    return 1;
-}
-
-int isValidMatrixSize(int size) {
+int validateMatrixSize(const int size) {
+    int isValid = 1;
     if (size < 2 || size > 10) {
-        printf("\nEnter value between 2 and 10: ");
-        return 0;
+        printf("Matrix size must be between 2 and 10.\n");
+        isValid = 0;
     }
-    return 1;
+    return isValid;
 }
 
-void getValidInput(const int size, int (*matrix)[size], int row, int col) {
-    int isValid = 0;
-    while (!isValid) {
-        scanf("%d", (*(matrix + row) + col));
-        isValid = isValidValue(*(*(matrix + row) + col));
-    }
-}
-
-void takeMatrixInput(const int size, int (*matrix)[size]) {
-    printf("\nEnter the values of %d x %d matrix:\n", size, size);
+void generateRandomMatrix(const int size, int (*matrix)[size]) {
+    printf("\nGenerated %d x %d matrix:\n", size, size);
     for (int row = 0; row < size; row++) {
         for (int col = 0; col < size; col++) {
-            getValidInput(size, matrix, row, col);
+            *(*(matrix + row) + col) = rand() % 256;
+            printf("%4d", *(*(matrix + row) + col));
         }
+        printf("\n");
     }
 }
 
-void printMatrix(const int size, int (*matrix)[size]) {
+void printMatrix(const int size, const int (*matrix)[size]) {
     for (int row = 0; row < size; row++) {
         for (int col = 0; col < size; col++) {
             printf("%4d", *(*(matrix + row) + col));
@@ -53,7 +41,7 @@ void transposeMatrix(const int size, int (*matrix)[size]) {
     }
 }
 
-void swapRows(const int size, int (*matrix)[size]) {
+void reverseRows(const int size, int (*matrix)[size]) {
     for (int row = 0; row < size; row++) {
         int start = 0, end = size - 1;
         while (start < end) {
@@ -66,69 +54,66 @@ void swapRows(const int size, int (*matrix)[size]) {
     }
 }
 
-void rotateMatrix(const int size, int (*matrix)[size]) {
+void rotateMatrixClockwise(const int size, int (*matrix)[size]) {
     transposeMatrix(size, matrix);
-    swapRows(size, matrix);
-    printf("\nRotated:\n");
+    reverseRows(size, matrix);
+    printf("\nMatrix after rotation:\n");
     printMatrix(size, matrix);
 }
 
-void applyFilterToElement(const int size, int (*matrix)[size], int row, int col) {
-    int count = 0, sum = 0;
-    for (int filterRow = -1; filterRow <= 1; filterRow++) {
-        for (int filterCol = -1; filterCol <= 1; filterCol++) {
-            int neighborRow = row + filterRow;
-            int neighborCol = col + filterCol;
-            if (neighborRow >= 0 && neighborRow < size && neighborCol >= 0 && neighborCol < size) {
-                sum += *(*(matrix + neighborRow) + neighborCol) & 0xFF;
-                count++;
+void applyMeanFilter(const int size, int (*matrix)[size]) {
+    int tempMatrix[size][size];
+
+    for (int row = 0; row < size; row++) {
+        for (int col = 0; col < size; col++) {
+            int sum = 0, count = 0;
+
+            for (int dRow = -1; dRow <= 1; dRow++) {
+                for (int dCol = -1; dCol <= 1; dCol++) {
+                    int nRow = row + dRow;
+                    int nCol = col + dCol;
+
+                    if (nRow >= 0 && nRow < size && nCol >= 0 && nCol < size) {
+                        sum += *(*(matrix + nRow) + nCol);
+                        count++;
+                    }
+                }
             }
-        }
-    }
-    int avg = sum / count;
-    *(*(matrix + row) + col) |= (avg << 8);
-}
-
-void applyFilter(const int size, int (*matrix)[size]) {
-    for (int row = 0; row < size; row++) {
-        for (int col = 0; col < size; col++) {
-            applyFilterToElement(size, matrix, row, col);
+            tempMatrix[row][col] = sum / count;
         }
     }
 
     for (int row = 0; row < size; row++) {
         for (int col = 0; col < size; col++) {
-            *(*(matrix + row) + col) >>= 8;
+            *(*(matrix + row) + col) = tempMatrix[row][col];
         }
     }
+
+    printf("\nMatrix after applying mean filter:\n");
+    printMatrix(size, matrix);
 }
 
 int main() {
-    int size = 0;
+    srand((unsigned) time(NULL));
+
+    int matrixSize = 0;
     int isValidSize = 0;
 
     while (!isValidSize) {
-        printf("\nEnter the N value: ");
-        scanf("%d", &size);
-        isValidSize = isValidMatrixSize(size);
+        printf("Enter matrix size (2 to 10): ");
+        scanf("%d", &matrixSize);
+        isValidSize = validateMatrixSize(matrixSize);
     }
 
-    int (*matrix)[size] = malloc(size * sizeof(*matrix));
+    int (*matrix)[matrixSize] = malloc(matrixSize * sizeof(*matrix));
     if (matrix == NULL) {
         printf("Memory allocation failed.\n");
-        return 1;
+        return 0;
     }
 
-    takeMatrixInput(size, matrix);
-
-    printf("\nOriginal:\n");
-    printMatrix(size, matrix);
-
-    rotateMatrix(size, matrix);
-    applyFilter(size, matrix);
-
-    printf("\nFiltered matrix:\n");
-    printMatrix(size, matrix);
+    generateRandomMatrix(matrixSize, matrix);
+    rotateMatrixClockwise(matrixSize, matrix);
+    applyMeanFilter(matrixSize, matrix);
 
     free(matrix);
     matrix = NULL;
