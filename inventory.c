@@ -2,302 +2,418 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define MIN_ID 1
-#define MAX_ID 10000
-#define NAME_LIMIT 50
-#define MIN_COST 0
-#define MAX_COST 100000
-#define MIN_STOCK 0
-#define MAX_STOCK 1000000
+#define MIN_PRODUCT_ID 1
+#define MAX_PRODUCT_ID 10000
+#define NAME_LENGTH 50
+#define MIN_PRICE 0
+#define MAX_PRICE 100000
+#define MIN_QUANTITY 0
+#define MAX_QUANTITY 1000000
 
 typedef enum {
-    ADD_PRODUCT = 1,
-    VIEW_PRODUCTS,
-    UPDATE_STOCK,
-    SEARCH_BY_ID,
-    SEARCH_BY_NAME,
-    SEARCH_BY_PRICE,
-    DELETE_PRODUCT,
-    EXIT_APP
-} MenuOption;
+    ADD_ITEM = 1,
+    VIEW_ITEMS,
+    UPDATE_QUANTITY,
+    SEARCH_ITEM_ID,
+    SEARCH_ITEM_NAME,
+    SEARCH_ITEM_PRICE,
+    DELETE_ITEM,
+    EXIT_SYSTEM
+} MenuAction;
 
 typedef struct {
     int id;
-    char name[NAME_LIMIT];
+    char name[NAME_LENGTH];
     float price;
-    int stock;
+    int quantity;
 } Product;
 
-int getLength(const char *s) {
-    if (!s) return 0;
-    int i = 0, spaces = 0;
-    while (s[i] != '\n' && s[i] != '\0') {
-        if (s[i] == ' ') spaces++;
-        i++;
+int stringLength(const char *str) {
+    if (!str) {
+        return 0;
     }
-    return (i == 0 || spaces == i) ? 0 : i;
+    int len = 0, spaces = 0;
+    while (str[len] != '\n' && str[len] != '\0') {
+        if (str[len] == ' ') {
+            spaces++;
+        }
+        len++;
+    }
+    if (len == 0 || spaces == len) {
+        return 0;
+    } else {
+        return len;
+    }
 }
 
-bool idExists(const int id, const Product *list, const int count) {
-    for (int i = 0; i < count; i++)
-        if (list[i].id == id)
+bool isIdDuplicate(const int id, const Product *items, const int total) {
+    for (int i = 0; i < total; i++) {
+        if (items[i].id == id) {
             return true;
+        }
+    }
     return false;
 }
 
-char lower(const char c) {
-    if (c >= 'A' && c <= 'Z') return c - 'A' + 'a';
-    return c;
+char toLowerCase(const char c) {
+    if (c >= 'A' && c <= 'Z') {
+        return c - 'A' + 'a';
+    } else {
+        return c;
+    }
 }
 
-bool sameIgnoreCase(const char a, const char b) {
-    return lower(a) == lower(b);
+bool isSameIgnoreCase(const char a, const char b) {
+    return toLowerCase(a) == toLowerCase(b);
 }
 
-bool startsWithIgnoreCase(const char *query, const char *name) {
+bool startsWithIgnoreCase(const char *prefix, const char *word) {
     int i = 0;
-    while (query[i] != '\0' && name[i] != '\0') {
-        if (!sameIgnoreCase(query[i], name[i])) return false;
+    while (prefix[i] != '\0' && word[i] != '\0') {
+        if (!isSameIgnoreCase(prefix[i], word[i])) {
+            return false;
+        }
         i++;
     }
-    return query[i] == '\0';
+    if (prefix[i] == '\0') {
+        return true;
+    } else {
+        return false;
+    }
 }
 
-void getName(Product *item) {
-    bool ok = false;
-    while (!ok) {
+void inputProductName(Product *item) {
+    bool valid = false;
+    while (!valid) {
         printf("Product Name: ");
-        if (fgets(item->name, NAME_LIMIT, stdin) == NULL) {
+        if (fgets(item->name, NAME_LENGTH, stdin) == NULL) {
             clearerr(stdin);
             continue;
         }
-        int len = getLength(item->name);
+        int len = stringLength(item->name);
         item->name[len] = '\0';
-        ok = len > 0;
-        if (!ok) printf("Invalid name. Try again.\n");
+        if (len > 0) {
+            valid = true;
+        } else {
+            printf("Invalid name. Try again.\n");
+        }
     }
 }
 
-void getId(Product *item, const Product *list, const int count) {
-    bool ok = false;
+void inputProductId(Product *item, const Product *items, const int total) {
+    bool valid = false;
     int id;
-    while (!ok) {
+    while (!valid) {
         printf("Product ID: ");
         if (scanf("%d", &id) != 1) {
-            int c; while ((c = getchar()) != '\n' && c != EOF);
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
             printf("Invalid input. Enter integer.\n");
             continue;
         }
-        int c = getchar(); (void)c;
-        if (id < MIN_ID || id > MAX_ID) {
+        int c = getchar();
+        (void)c;
+        if (id < MIN_PRODUCT_ID || id > MAX_PRODUCT_ID) {
             printf("ID out of range.\n");
-        } else if (idExists(id, list, count)) {
+        } else if (isIdDuplicate(id, items, total)) {
             printf("ID already exists. Try another.\n");
-        } else ok = true;
+        } else {
+            valid = true;
+        }
     }
     item->id = id;
 }
 
-void getPrice(Product *item) {
-    bool ok = false;
-    float cost;
-    while (!ok) {
+void inputProductPrice(Product *item) {
+    bool valid = false;
+    float price;
+    while (!valid) {
         printf("Product Price: ");
-        if (scanf("%f", &cost) != 1) {
-            int c; while ((c = getchar()) != '\n' && c != EOF);
+        if (scanf("%f", &price) != 1) {
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
             printf("Invalid input. Enter number.\n");
             continue;
         }
-        int c = getchar(); (void)c;
-        if (cost < MIN_COST || cost > MAX_COST)
+        int c = getchar();
+        (void)c;
+        if (price < MIN_PRICE || price > MAX_PRICE) {
             printf("Invalid price range.\n");
-        else ok = true;
+        } else {
+            valid = true;
+        }
     }
-    item->price = cost;
+    item->price = price;
 }
 
-void getStock(Product *item) {
-    bool ok = false;
+void inputProductQuantity(Product *item) {
+    bool valid = false;
     int qty;
-    while (!ok) {
+    while (!valid) {
         printf("Product Quantity: ");
         if (scanf("%d", &qty) != 1) {
-            int c; while ((c = getchar()) != '\n' && c != EOF);
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
             printf("Invalid input. Enter integer.\n");
             continue;
         }
-        int c = getchar(); (void)c;
-        if (qty < MIN_STOCK || qty > MAX_STOCK)
+        int c = getchar();
+        (void)c;
+        if (qty < MIN_QUANTITY || qty > MAX_QUANTITY) {
             printf("Quantity out of range.\n");
-        else ok = true;
+        } else {
+            valid = true;
+        }
     }
-    item->stock = qty;
+    item->quantity = qty;
 }
 
-void fillProduct(Product *list, const int count, const int idx) {
-    getId(&list[idx], list, count);
-    getName(&list[idx]);
-    getPrice(&list[idx]);
-    getStock(&list[idx]);
+void createProduct(Product *items, const int total, const int index) {
+    inputProductId(&items[index], items, total);
+    inputProductName(&items[index]);
+    inputProductPrice(&items[index]);
+    inputProductQuantity(&items[index]);
 }
 
-void showProduct(const Product *p) {
+void displayProduct(const Product *item) {
     printf("ID: %d | Name: %s | Price: %.2f | Quantity: %d\n",
-           p->id, p->name, p->price, p->stock);
+           item->id, item->name, item->price, item->quantity);
 }
 
-void showAll(const Product *list, const int count) {
+void displayAllProducts(const Product *items, const int total) {
     printf("\n--- PRODUCT LIST ---\n");
-    for (int i = 0; i < count; i++)
-        showProduct(&list[i]);
+    for (int i = 0; i < total; i++) {
+        displayProduct(&items[i]);
+    }
 }
 
-int findIndexById(const Product *list, const int count, const int id) {
-    for (int i = 0; i < count; i++)
-        if (list[i].id == id)
+int getProductIndexById(const Product *items, const int total, const int id) {
+    for (int i = 0; i < total; i++) {
+        if (items[i].id == id) {
             return i;
+        }
+    }
     printf("No product found with ID %d.\n", id);
     return -1;
 }
 
-void addProduct(Product **list, int *count, int *cap) {
-    if (*count == *cap) {
-        *cap = (*cap == 0) ? 1 : (*cap * 2);
-        Product *tmp = realloc(*list, (*cap) * sizeof(Product));
-        if (!tmp) {
+void addNewProduct(Product **items, int *total, int *capacity) {
+    if (*total == *capacity) {
+        *capacity = (*capacity == 0) ? 1 : (*capacity * 2);
+        Product *temp = realloc(*items, (*capacity) * sizeof(Product));
+        if (!temp) {
             printf("Memory allocation failed.\n");
             return;
+        } else {
+            *items = temp;
         }
-        *list = tmp;
     }
-    fillProduct(*list, *count, *count);
-    (*count)++;
+    createProduct(*items, *total, *total);
+    (*total)++;
     printf("Product added successfully.\n");
 }
 
-void modifyStock(Product *list, const int count) {
+void updateProductQuantity(Product *items, const int total) {
     int id;
     printf("Enter Product ID: ");
-    if (scanf("%d", &id) != 1) { int c; while ((c = getchar()) != '\n' && c != EOF); return; }
-    int c = getchar(); (void)c;
-    int idx = findIndexById(list, count, id);
-    if (idx != -1) {
-        getStock(&list[idx]);
+    if (scanf("%d", &id) != 1) {
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF) {}
+        return;
+    }
+    int c = getchar();
+    (void)c;
+    int index = getProductIndexById(items, total, id);
+    if (index != -1) {
+        inputProductQuantity(&items[index]);
         printf("Quantity updated.\n");
     }
 }
 
-void searchById(const Product *list, const int count) {
+void searchProductById(const Product *items, const int total) {
     int id;
     printf("Enter Product ID: ");
-    if (scanf("%d", &id) != 1) { int c; while ((c = getchar()) != '\n' && c != EOF); return; }
-    int c = getchar(); (void)c;
-    int idx = findIndexById(list, count, id);
-    if (idx != -1) showProduct(&list[idx]);
+    if (scanf("%d", &id) != 1) {
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF) {}
+        return;
+    }
+    int c = getchar();
+    (void)c;
+    int index = getProductIndexById(items, total, id);
+    if (index != -1) {
+        displayProduct(&items[index]);
+    }
 }
 
-void searchByName(const Product *list, const int count) {
-    int c; while ((c = getchar()) != '\n' && c != EOF) { break; }
-    char query[NAME_LIMIT];
+void searchProductByName(const Product *items, const int total) {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF) {
+        break;
+    }
+    char input[NAME_LENGTH];
     printf("Enter name (partial allowed): ");
-    if (fgets(query, NAME_LIMIT, stdin) == NULL) { clearerr(stdin); return; }
-    int len = getLength(query);
-    query[len] = '\0';
+    if (fgets(input, NAME_LENGTH, stdin) == NULL) {
+        clearerr(stdin);
+        return;
+    }
+    int len = stringLength(input);
+    input[len] = '\0';
     bool found = false;
-    for (int i = 0; i < count; i++) {
-        if (startsWithIgnoreCase(query, list[i].name)) {
-            if (!found) printf("Matching products:\n");
+    for (int i = 0; i < total; i++) {
+        if (startsWithIgnoreCase(input, items[i].name)) {
+            if (!found) {
+                printf("Matching products:\n");
+            }
             found = true;
-            showProduct(&list[i]);
+            displayProduct(&items[i]);
         }
     }
-    if (!found) printf("No match found for '%s'.\n", query);
+    if (!found) {
+        printf("No match found for '%s'.\n", input);
+    }
 }
 
-void searchByPrice(const Product *list, const int count) {
+void searchProductByPrice(const Product *items, const int total) {
     float min, max;
     printf("Enter minimum price: ");
-    if (scanf("%f", &min) != 1) { int c; while ((c = getchar()) != '\n' && c != EOF); return; }
+    if (scanf("%f", &min) != 1) {
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF) {}
+        return;
+    }
     printf("Enter maximum price: ");
-    if (scanf("%f", &max) != 1) { int c; while ((c = getchar()) != '\n' && c != EOF); return; }
-    int c = getchar(); (void)c;
+    if (scanf("%f", &max) != 1) {
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF) {}
+        return;
+    }
+    int c = getchar();
+    (void)c;
     bool found = false;
-    for (int i = 0; i < count; i++) {
-        if (list[i].price >= min && list[i].price <= max) {
-            if (!found) printf("Products in range:\n");
+    for (int i = 0; i < total; i++) {
+        if (items[i].price >= min && items[i].price <= max) {
+            if (!found) {
+                printf("Products in range:\n");
+            }
             found = true;
-            showProduct(&list[i]);
+            displayProduct(&items[i]);
         }
     }
-    if (!found) printf("No products between %.2f and %.2f.\n", min, max);
+    if (!found) {
+        printf("No products between %.2f and %.2f.\n", min, max);
+    }
 }
 
-void swap(Product *a, Product *b) {
-    Product t = *a;
+void swapProducts(Product *a, Product *b) {
+    Product temp = *a;
     *a = *b;
-    *b = t;
+    *b = temp;
 }
 
-void removeProduct(Product *list, int *count) {
+void deleteProduct(Product *items, int *total) {
     int id;
     printf("Enter Product ID to delete: ");
-    if (scanf("%d", &id) != 1) { int c; while ((c = getchar()) != '\n' && c != EOF); return; }
-    int c = getchar(); (void)c;
-    int idx = findIndexById(list, *count, id);
-    if (idx != -1) {
-        for (int i = idx + 1; i < *count; i++)
-            swap(&list[i - 1], &list[i]);
-        (*count)--;
+    if (scanf("%d", &id) != 1) {
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF) {}
+        return;
+    }
+    int c = getchar();
+    (void)c;
+    int index = getProductIndexById(items, *total, id);
+    if (index != -1) {
+        for (int i = index + 1; i < *total; i++) {
+            swapProducts(&items[i - 1], &items[i]);
+        }
+        (*total)--;
         printf("Product deleted.\n");
     }
 }
 
-void manageInventory(const int initialCount) {
-    Product *list = calloc(initialCount, sizeof(Product));
-    if (!list) {
+void runInventorySystem(const int initialCount) {
+    Product *items = calloc(initialCount, sizeof(Product));
+    if (!items) {
         printf("Memory allocation failed.\n");
         return;
     }
 
     for (int i = 0; i < initialCount; i++) {
         printf("\nEnter details for product %d\n", i + 1);
-        fillProduct(list, initialCount, i);
+        createProduct(items, initialCount, i);
     }
 
-    int count = initialCount, cap = initialCount, choice = 0;
-    bool running = true;
+    int total = initialCount, capacity = initialCount, choice = 0;
+    bool active = true;
 
-    while (running) {
+    while (active) {
         printf("\n--- INVENTORY MENU ---\n");
         printf("1. Add Product\n2. View Products\n3. Update Quantity\n4. Search by ID\n5. Search by Name\n6. Search by Price Range\n7. Delete Product\n8. Exit\n");
         printf("Enter choice: ");
-        if (scanf("%d", &choice) != 1) { int c; while ((c = getchar()) != '\n' && c != EOF); continue; }
-        int c = getchar(); (void)c;
+        if (scanf("%d", &choice) != 1) {
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
+            continue;
+        }
+        int c = getchar();
+        (void)c;
 
         switch (choice) {
-            case ADD_PRODUCT: addProduct(&list, &count, &cap); break;
-            case VIEW_PRODUCTS: showAll(list, count); break;
-            case UPDATE_STOCK: modifyStock(list, count); break;
-            case SEARCH_BY_ID: searchById(list, count); break;
-            case SEARCH_BY_NAME: searchByName(list, count); break;
-            case SEARCH_BY_PRICE: searchByPrice(list, count); break;
-            case DELETE_PRODUCT: removeProduct(list, &count); break;
-            case EXIT_APP: running = false; break;
-            default: printf("Invalid choice.\n");
+            case ADD_ITEM: {
+                addNewProduct(&items, &total, &capacity);
+                break;
+            }
+            case VIEW_ITEMS: {
+                displayAllProducts(items, total);
+                break;
+            }
+            case UPDATE_QUANTITY: {
+                updateProductQuantity(items, total);
+                break;
+            }
+            case SEARCH_ITEM_ID: {
+                searchProductById(items, total);
+                break;
+            }
+            case SEARCH_ITEM_NAME: {
+                searchProductByName(items, total);
+                break;
+            }
+            case SEARCH_ITEM_PRICE: {
+                searchProductByPrice(items, total);
+                break;
+            }
+            case DELETE_ITEM: {
+                deleteProduct(items, &total);
+                break;
+            }
+            case EXIT_SYSTEM: {
+                active = false;
+                break;
+            }
+            default: {
+                printf("Invalid choice.\n");
+                break;
+            }
         }
     }
 
-    free(list);
+    free(items);
     printf("Exiting... Memory freed.\n");
 }
 
 int main() {
-    int count = 0;
-    while (count < 1 || count > 100) {
+    int initialCount = 0;
+    while (initialCount < 1 || initialCount > 100) {
         printf("Enter initial number of products (1 - 100): ");
-        if (scanf("%d", &count) != 1) { int c; while ((c = getchar()) != '\n' && c != EOF); continue; }
-        int c = getchar(); (void)c;
+        if (scanf("%d", &initialCount) != 1) {
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
+            continue;
+        }
+        int c = getchar();
+        (void)c;
     }
-    manageInventory(count);
+    runInventorySystem(initialCount);
     return 0;
 }
