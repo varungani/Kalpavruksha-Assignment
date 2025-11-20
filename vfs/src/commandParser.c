@@ -2,61 +2,70 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h> 
+#include <ctype.h>
 
-int find_length(const char *name) {
-    int i = 0;
-    while (name[i] != '\0') {
-        i++;
+int calculate_string_length(const char *str) {
+    int len = 0;
+    while (str[len] != '\0') {
+        len++;
     }
-    return i;
+    return len;
 }
 
-void parse_string(const char *str, char parsed[3][1000]) {
-    int i = 0, j = 0;
+void parse_input_string(const char *input_string, char args_array[3][1000]) {
+    int str_idx = 0;
+    int arg_idx = 0;
+    
+ 
     for (int x = 0; x < 3; x++) {
-        parsed[x][0] = '\0';
+        args_array[x][0] = '\0';
     }
-    while (str[i] != '\0' && str[i] != '\n' && j < 3) {
-        while (str[i] == ' ') {
-            i++;
+
+    while (input_string[str_idx] != '\0' && input_string[str_idx] != '\n' && arg_idx < 3) {
+       
+        while (input_string[str_idx] == ' ') {
+            str_idx++;
         }
-        if (str[i] == '\0' || str[i] == '\n') {
+        if (input_string[str_idx] == '\0' || input_string[str_idx] == '\n') {
             break;
         }
-        int k = 0;
-        if (str[i] == '"') {
-            i++;
-            while (str[i] != '"' && str[i] != '\0' && str[i] != '\n' && k < 999) {
-                parsed[j][k++] = str[i++];
+
+        int char_idx = 0;
+     
+        if (input_string[str_idx] == '"') {
+            str_idx++;
+            while (input_string[str_idx] != '"' && input_string[str_idx] != '\0' && input_string[str_idx] != '\n' && char_idx < 999) {
+                args_array[arg_idx][char_idx++] = input_string[str_idx++];
             }
-            if (str[i] == '"') {
-                i++;
+            if (input_string[str_idx] == '"') {
+                str_idx++;
             }
         } else {
-            while (str[i] != ' ' && str[i] != '\0' && str[i] != '\n' && k < 999) {
-                parsed[j][k++] = str[i++];
+           
+            while (input_string[str_idx] != ' ' && input_string[str_idx] != '\0' && input_string[str_idx] != '\n' && char_idx < 999) {
+                args_array[arg_idx][char_idx++] = input_string[str_idx++];
             }
         }
-        parsed[j][k] = '\0';
-        j++;
+        args_array[arg_idx][char_idx] = '\0';
+        arg_idx++;
     }
 }
 
-int valid_name(const char *name) {
-    if (name[0] == '\0') {
-        printf("\nInvalid name.");
+int is_valid_name(const char *name) {
+    if (name == NULL || name[0] == '\0') {
+        
         return 0;
     }
-    const char *reserved[] = {"cwd", "mkdir", "create", "write", "read", "pwd", "rmdir", "ls", "cd", "df", "exit", NULL};
-    for (int i = 0; reserved[i] != NULL; i++) {
-        if (strcmp(name, reserved[i]) == 0) {
-            printf("\nReserved word.");
+    const char *reserved_words[] = {"mkdir", "create", "write", "read", "rmdir", "delete", "ls", "cd", "df", "exit", NULL};
+    
+    for (int i = 0; reserved_words[i] != NULL; i++) {
+        if (strcmp(name, reserved_words[i]) == 0) {
+            printf("\nError: '%s' is a reserved word.", name);
             return 0;
         }
     }
     if (strlen(name) > NAME_SIZE) {
-        printf("\nName too long.");
+        printf("\nError: Name too long.");
         return 0;
     }
     return 1;
