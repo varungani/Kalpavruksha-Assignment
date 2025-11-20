@@ -1,112 +1,127 @@
 #include "../inc/file.h"
-#include "../inc/commandParser.h" // For find_length()
+#include "../inc/commandParser.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 void create_file(const char *name) {
-    if (find_child(name) != NULL) {
-        printf("\nFile '%s' already exists.", name);
+    if (find_child_node(name) != NULL) {
+        printf("\nError: '%s' already exists.", name);
         return;
     }
-    file_node *temp = (file_node *)malloc(sizeof(file_node));
-    strcpy(temp->name, name);
-    temp->size = 0;
-    temp->num_blocks = 0;
-    temp->is_directory = 0;
-    temp->block_pointers = NULL;
-    temp->parent = current_dir;
-    temp->child = NULL;
-    temp->next = temp;
-    temp->prev = temp;
+    file_node *new_file = (file_node *)malloc(sizeof(file_node));
+    strcpy(new_file->name, name);
+    new_file->size = 0;
+    new_file->num_blocks = 0;
+    new_file->is_directory = 0;
+    new_file->block_pointers = NULL;
+    new_file->parent = current_dir;
+    new_file->child = NULL;
+    
+    
+    new_file->next = new_file;
+    new_file->prev = new_file;
+    
     if (current_dir->child == NULL) {
-        current_dir->child = temp;
+        current_dir->child = new_file;
     } else {
         file_node *head = current_dir->child;
         file_node *tail = head->prev;
-        temp->next = head;
-        temp->prev = tail;
-        tail->next = temp;
-        head->prev = temp;
+        
+        tail->next = new_file;
+        new_file->prev = tail;
+        new_file->next = head;
+        head->prev = new_file;
     }
     printf("File '%s' created.\n", name);
 }
 
-void write_file(const char *name, const char *text) {
-    file_node *temp = find_child(name);
-    if (temp == NULL) {
+void write_to_file(const char *name, const char *text) {
+    file_node *file_ptr = find_child_node(name);
+    if (file_ptr == NULL) {
         printf("\nFile '%s' not found.", name);
         return;
     }
-    if (temp->is_directory) {
+    if (file_ptr->is_directory) {
         printf("\nError: '%s' is a directory.", name);
         return;
     }
-    int len = find_length(text);
-    int i = 0;
-    while (i < len) {
-        int index = get_index();
-        if (index == -1) {
-            return;
+    
+    int text_len = calculate_string_length(text);
+    int current_char_pos = 0;
+    
+    while (current_char_pos < text_len) {
+        int disk_block_index = allocate_free_block_index();
+        if (disk_block_index == -1) {
+            return; 
         }
-        int k = 0;
-        while (i < len && k < BLOCK_SIZE) {
-            virtual_disk[index][k++] = text[i++];
+        
+        int byte_offset = 0;
+        while (current_char_pos < text_len && byte_offset < BLOCK_SIZE) {
+            virtual_disk[disk_block_index][byte_offset++] = text[current_char_pos++];
         }
-        temp->size += k;
-        temp->num_blocks++;
-        temp->block_pointers = (int *)realloc(temp->block_pointers, temp->num_blocks * sizeof(int));
-        temp->block_pointers[temp->num_blocks - 1] = index;
+        
+        file_ptr->size += byte_offset;
+        file_ptr->num_blocks++;
+        file_ptr->block_pointers = (int *)realloc(file_ptr->block_pointers, file_ptr->num_blocks * sizeof(int));
+        file_ptr->block_pointers[file_ptr->num_blocks - 1] = disk_block_index;
     }
     printf("Data written successfully.\n");
 }
 
-void read_file(const char *name) {
-    file_node *temp = find_child(name);
-    if (temp == NULL) {
+void read_from_file(const char *name) {
+    file_node *file_ptr = find_child_node(name);
+    if (file_ptr == NULL) {
         printf("\nFile '%s' not found.", name);
         return;
     }
-    if (temp->is_directory) {
-        printf("\n'%s' is a directory.", name);
+    if (file_ptr->is_directory) {
+        printf("\nError: '%s' is a directory.", name);
         return;
     }
+    
     printf("\nData in '%s':\n", name);
-    int remaining = temp->size;
-    for (int i = 0; i < temp->num_blocks; i++) {
-        int index = temp->block_pointers[i];
-        int to_print = (remaining > BLOCK_SIZE) ? BLOCK_SIZE : remaining;
-        for (int j = 0; j < to_print; j++) {
-            putchar(virtual_disk[index][j]);
+    int bytes_remaining = file_ptr->size;
+    
+    for (int i = 0; i < file_ptr->num_blocks; i++) {
+        int block_idx = file_ptr->block_pointers[i];
+        int bytes_to_read = (bytes_remaining > BLOCK_SIZE) ? BLOCK_SIZE : bytes_remaining;
+        
+        for (int j = 0; j < bytes_to_read; j++) {
+            putchar(virtual_disk[block_idx][j]);
         }
-        remaining -= to_print;
+        bytes_remaining -= bytes_to_read;
     }
     printf("\n");
 }
 
-void delete_file_node(file_node *temp) {
-    if (temp == NULL) {
-        return;
-    }
-    char name[50];
-    strcpy(name, temp->name);
-    if (temp->parent->child == temp) {
-        if (temp->next == temp) {
-            temp->parent->child = NULL;
+void delete_file_node(file_node *file_to_delete) {
+    if (file_to_delete == NULL) return;
+
+    char filename_backup[50];
+    strcpy(filename_backup, file_to_delete->name);
+
+    
+    if (file_to_delete->parent->child == file_to_delete) {
+        if (file_to_delete->next == file_to_delete) {
+            file_to_delete->parent->child = NULL;
         } else {
-            temp->parent->child = temp->next;
+            file_to_delete->parent->child = file_to_delete->next;
         }
     }
-    for (int i = 0; i < temp->num_blocks; i++) {
-        restore_free_block(temp->block_pointers[i]);
+    
+    
+    for (int i = 0; i < file_to_delete->num_blocks; i++) {
+        release_block_index(file_to_delete->block_pointers[i]);
     }
-    free(temp->block_pointers);
-    if (temp->next == temp) {
-        free(temp);
-    } else {
-        temp->next->prev = temp->prev;
-        temp->prev->next = temp->next;
-        free(temp);
+    free(file_to_delete->block_pointers);
+    
+   
+    if (file_to_delete->next != file_to_delete) {
+        file_to_delete->next->prev = file_to_delete->prev;
+        file_to_delete->prev->next = file_to_delete->next;
     }
-    printf("\nFile '%s' deleted.", name);
+    
+    free(file_to_delete);
+    printf("\nFile '%s' deleted.", filename_backup);
 }
