@@ -3,35 +3,33 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 char virtual_disk[NUM_BLOCKS][BLOCK_SIZE];
 free_block *free_list_head = NULL;
 file_node *root = NULL;
 file_node *current_dir = NULL;
 
-
-
-void insert_free_blocks() {
+void initialize_free_blocks() {
     for (int i = 0; i < NUM_BLOCKS; i++) {
-        free_block *temp = (free_block *)malloc(sizeof(free_block));
-        temp->index = i;
-        temp->next = NULL;
-        temp->prev = NULL;
+        free_block *new_block = (free_block *)malloc(sizeof(free_block));
+        new_block->index = i;
+        
         if (free_list_head == NULL) {
-            free_list_head = temp;
+            free_list_head = new_block;
             free_list_head->next = free_list_head;
             free_list_head->prev = free_list_head;
         } else {
-            free_list_head->prev->next = temp;
-            temp->next = free_list_head;
-            temp->prev = free_list_head->prev;
-            free_list_head->prev = temp;
+           
+            free_block *tail = free_list_head->prev;
+            
+            tail->next = new_block;
+            new_block->prev = tail;
+            new_block->next = free_list_head;
+            free_list_head->prev = new_block;
         }
-        free_list_head = temp;
     }
 }
 
-void add_root_directory() {
+void initialize_root_directory() {
     root = (file_node *)malloc(sizeof(file_node));
     strcpy(root->name, "/");
     root->is_directory = 1;
@@ -42,81 +40,94 @@ void add_root_directory() {
     current_dir = root;
 }
 
-int get_index() {
+int allocate_free_block_index() {
     if (free_list_head == NULL) {
-        printf("\nError: not enough space!");
+        printf("\nError: Not enough space on disk!");
         return -1;
     }
-    int index = free_list_head->index;
+    int allocated_index = free_list_head->index;
+    
     if (free_list_head->next == free_list_head) {
+        
         free(free_list_head);
         free_list_head = NULL;
-        return index;
+        return allocated_index;
     }
-    free_block *temp = free_list_head;
-    free_block *head = free_list_head->next;
+    
+    free_block *node_to_remove = free_list_head;
+    free_block *new_head = free_list_head->next;
     free_block *tail = free_list_head->prev;
-    head->prev = tail;
-    tail->next = head;
-    free_list_head = head;
-    free(temp);
-    return index;
+    
+    new_head->prev = tail;
+    tail->next = new_head;
+    free_list_head = new_head;
+    
+    free(node_to_remove);
+    return allocated_index;
 }
 
-void restore_free_block(const int index) {
+void release_block_index(const int index) {
+    free_block *returned_block = (free_block *)malloc(sizeof(free_block));
+    returned_block->index = index;
+
     if (free_list_head == NULL) {
-        free_block *head = (free_block *)malloc(sizeof(free_block));
-        head->index = index;
-        head->next = head;
-        head->prev = head;
-        free_list_head = head;
+        returned_block->next = returned_block;
+        returned_block->prev = returned_block;
+        free_list_head = returned_block;
         return;
     }
-    free_block *head = free_list_head;
+    
+    
     free_block *tail = free_list_head->prev;
-    free_block *temp = (free_block *)malloc(sizeof(free_block));
-    temp->index = index;
-    head->prev = temp;
-    tail->next = temp;
-    temp->prev = tail;
-    temp->next = head;
+    
+    tail->next = returned_block;
+    returned_block->prev = tail;
+    returned_block->next = free_list_head;
+    free_list_head->prev = returned_block;
+    
+    
 }
 
-file_node *find_child(const char *name) {
-    file_node *temp = current_dir->child;
-    if (temp == NULL) {
+file_node *find_child_node(const char *name) {
+    if (current_dir->child == NULL) {
         return NULL;
     }
+    file_node *iterator = current_dir->child;
     do {
-        if (strcmp(temp->name, name) == 0) {
-            return temp;
+        if (strcmp(iterator->name, name) == 0) {
+            return iterator;
         }
-        temp = temp->next;
-    } while (temp != current_dir->child);
+        iterator = iterator->next;
+    } while (iterator != current_dir->child);
     return NULL;
 }
 
 void make_directory(const char *name) {
-    if (find_child(name) != NULL) {
+    if (find_child_node(name) != NULL) {
         printf("\nDirectory '%s' already exists.", name);
         return;
     }
-    file_node *temp = (file_node *)malloc(sizeof(file_node));
-    strcpy(temp->name, name);
-    temp->is_directory = 1;
-    temp->parent = current_dir;
-    temp->child = NULL;
-    temp->next = temp;
-    temp->prev = temp;
+    file_node *new_dir = (file_node *)malloc(sizeof(file_node));
+    strcpy(new_dir->name, name);
+    new_dir->is_directory = 1;
+    new_dir->parent = current_dir;
+    new_dir->child = NULL;
+    
+    
+    new_dir->next = new_dir;
+    new_dir->prev = new_dir;
+
     if (current_dir->child == NULL) {
-        current_dir->child = temp;
+        current_dir->child = new_dir;
     } else {
         file_node *head = current_dir->child;
         file_node *tail = head->prev;
-        head->prev = temp;
-        temp->next = head;
-        temp->prev = tail;
-        tail->next = temp;
+        
+       
+        tail->next = new_dir;
+        new_dir->prev = tail;
+        new_dir->next = head;
+        head->prev = new_dir;
     }
     printf("Directory '%s' created.\n", name);
 }
@@ -126,43 +137,48 @@ void remove_directory(const char *name) {
         printf("\nCannot delete root directory.");
         return;
     }
-    file_node *temp = find_child(name);
-    if (temp == NULL) {
+    file_node *target_node = find_child_node(name);
+    if (target_node == NULL) {
         printf("\nDirectory '%s' not found.", name);
         return;
     }
-    if (temp->child != NULL) {
+    if (target_node->child != NULL) {
         printf("\nCannot delete non-empty directory.");
         return;
     }
-    if (temp->parent->child == temp) {
-        if (temp->next == temp) {
-            temp->parent->child = NULL;
+
+   
+    if (target_node->parent->child == target_node) {
+        if (target_node->next == target_node) {
+           
+            target_node->parent->child = NULL;
         } else {
-            temp->parent->child = temp->next;
+            
+            target_node->parent->child = target_node->next;
         }
     }
-    if (temp->next == temp) {
-        free(temp);
-    } else {
-        temp->next->prev = temp->prev;
-        temp->prev->next = temp->next;
-        free(temp);
+
+    
+    if (target_node->next != target_node) {
+        target_node->prev->next = target_node->next;
+        target_node->next->prev = target_node->prev;
     }
+
+    free(target_node);
     printf("\nDirectory '%s' deleted.", name);
 }
 
-void list_files() {
-    file_node *temp = current_dir->child;
+void list_directory_contents() {
+    file_node *iterator = current_dir->child;
     printf("\n");
-    if (temp == NULL) {
+    if (iterator == NULL) {
         printf("(empty directory)");
         return;
     }
     do {
-        printf("%s ", temp->name);
-        temp = temp->next;
-    } while (temp != current_dir->child);
+        printf("%s ", iterator->name);
+        iterator = iterator->next;
+    } while (iterator != current_dir->child);
 }
 
 void change_directory(const char *name) {
@@ -175,79 +191,87 @@ void change_directory(const char *name) {
         printf("\nMoved to '%s'.", current_dir->name);
         return;
     }
+    
+    
+    if (strcmp(name, ".") == 0) {
+         return;
+    }
+
     if (current_dir->child == NULL) {
-        printf("\nNo subdirectories.");
+        printf("\nNo subdirectories found.");
         return;
     }
-    file_node *temp = current_dir->child;
+    
+    file_node *iterator = current_dir->child;
     do {
-        if (strcmp(temp->name, name) == 0 && temp->is_directory) {
-            current_dir = temp;
+        if (strcmp(iterator->name, name) == 0 && iterator->is_directory) {
+            current_dir = iterator;
             printf("\nMoved to '%s'.", name);
             return;
         }
-        temp = temp->next;
-    } while (temp != current_dir->child);
+        iterator = iterator->next;
+    } while (iterator != current_dir->child);
+    
     printf("\nDirectory not found.");
 }
 
 void show_disk_usage() {
-    int count = 0;
-    int used_blocks = 0;
-    float usage = 0.0;
+    int free_count = 0;
     if (free_list_head != NULL) {
-        free_block *temp = free_list_head;
+        free_block *iterator = free_list_head;
         do {
-            count++;
-            temp = temp->next;
-        } while (temp != free_list_head);
-        used_blocks = NUM_BLOCKS - count;
-        usage = ((float)used_blocks / NUM_BLOCKS) * 100.0;
-    } else {
-        used_blocks = NUM_BLOCKS;
-        count = 0;
-        usage = 100.0;
+            free_count++;
+            iterator = iterator->next;
+        } while (iterator != free_list_head);
     }
-    printf("\nTotal: %d", NUM_BLOCKS);
-    printf("\nUsed: %d", used_blocks);
-    printf("\nFree: %d", count);
-    printf("\nUsage: %.2f%%", usage);
+    
+    int used_blocks = NUM_BLOCKS - free_count;
+    float usage_percent = ((float)used_blocks / NUM_BLOCKS) * 100.0;
+    
+    printf("\nTotal Blocks: %d", NUM_BLOCKS);
+    printf("\nUsed Blocks:  %d", used_blocks);
+    printf("\nFree Blocks:  %d", free_count);
+    printf("\nUsage:        %.2f%%", usage_percent);
 }
 
 void free_virtual_memory() {
-    if (free_list_head == NULL) {
-        return;
-    }
-    free_list_head->prev->next = NULL;
-    free_block *head = free_list_head;
-    while (head != NULL) {
-        free_block *temp = head;
-        head = head->next;
-        free(temp);
+    if (free_list_head == NULL) return;
+    
+  
+    free_list_head->prev->next = NULL; 
+    
+    free_block *current = free_list_head;
+    while (current != NULL) {
+        free_block *next_node = current->next;
+        free(current);
+        current = next_node;
     }
     free_list_head = NULL;
 }
 
-void free_file_nodes(file_node *temp) {
-    if (temp == NULL) {
-        return;
-    }
-    if (temp->child != NULL) {
-        file_node *head = temp->child;
-        head->prev->next = NULL;
-        while (head != NULL) {
-            file_node *next = head->next;
-            free_file_nodes(head);
-            head = next;
+void recursive_free_nodes(file_node *node) {
+    if (node == NULL) return;
+    
+    if (node->child != NULL) {
+        file_node *child_iter = node->child;
+      
+        child_iter->prev->next = NULL;
+        
+        while (child_iter != NULL) {
+            file_node *next_child = child_iter->next;
+            recursive_free_nodes(child_iter); 
+            child_iter = next_child;
         }
     }
-    free(temp);
+   
+    if (node->block_pointers != NULL) {
+        free(node->block_pointers);
+    }
+    free(node);
 }
 
-void exit_program() {
-    free_file_nodes(root);
+void cleanup_system() {
+    recursive_free_nodes(root);
     root = NULL;
     free_virtual_memory();
-    printf("\nExiting...");
-    exit(0);
 }
