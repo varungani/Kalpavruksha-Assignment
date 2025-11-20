@@ -5,11 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #define BLOCK_SIZE 512
 #define NUM_BLOCKS 5000
 #define NAME_SIZE 50
-
 
 extern char virtual_disk[NUM_BLOCKS][BLOCK_SIZE];
 
@@ -31,27 +29,23 @@ typedef struct file_node {
     int *block_pointers;
 } file_node;
 
-
 extern free_block *free_list_head;
 extern file_node *root;
 extern file_node *current_dir;
 
-
-
-
-void insert_free_blocks();
-void add_root_directory();
-int get_index();
-void restore_free_block(const int index);
+void initialize_free_blocks();
+void initialize_root_directory();
+int allocate_free_block_index();
+void release_block_index(const int index);
 void show_disk_usage();
 void free_virtual_memory();
-void free_file_nodes(file_node *temp);
-void exit_program();
+void cleanup_system(); 
+void recursive_free_nodes(file_node *node);
 
-file_node *find_child(const char *name);
+file_node *find_child_node(const char *name);
 void make_directory(const char *name);
 void remove_directory(const char *name);
-void list_files();
+void list_directory_contents();
 void change_directory(const char *name);
 
 #endif
